@@ -34,12 +34,8 @@ def isGhidraTool(cur_file):
         isGhidra = True
 
 def compareSuccessors(succes, com_succes):
-    if isGhidra:
-        if len(succes) - len(com_succes) == 0 or len(succes) + 1 - len(com_succes) == 0:
-            return 0
-        return len(succes) + 1 - len(com_succes)
-    else:
-        return len(succes) - len(com_succes)
+    """Return the number of differing addresses; zero means an exact match."""
+    return len(set(succes).symmetric_difference(com_succes))
 
 def isInRange(asm_file_range, addr):
     for (start, end) in asm_file_range.items():
@@ -75,22 +71,12 @@ def compareJmpTables(groundTruth, compared, insts):
         successors_result = ", ".join(f"0x{x:x}" for x in successors)
         logging.error("[Jump Table successors wrong #{0} in 0x{1:x}]: \n Ground Truth is {2}\n compared is {3}".format(successorWrong, terminator, ground_truth_result, successors_result))
         successorWrong += 1
-        if compare_result < 0:
-            logging.error("[More than ground truth]: 0x%x" % terminator)
-            cnt = 0
-            for suc in successors:
-                if suc not in groundTruth[terminator]:
-                    cnt = cnt + 1
-                    logging.error("FalsePositive Successor #%d: 0x%x" %(cnt,suc))
-            if cnt == 1:
-                truePositive += 1
-        else:
-            logging.error("[Less than ground truth]: 0x%x" % terminator)
-            cnt = 0
-            for suc in groundTruth[terminator]:
-                if suc not in successors:
-                    cnt = cnt + 1
-                    logging.error("FalseNegative Successor #%d: 0x%x" %(cnt,suc))
+        expected = set(groundTruth[terminator])
+        actual = set(successors)
+        for cnt, suc in enumerate(sorted(actual - expected), 1):
+            logging.error("FalsePositive Successor #%d: 0x%x", cnt, suc)
+        for cnt, suc in enumerate(sorted(expected - actual), 1):
+            logging.error("FalseNegative Successor #%d: 0x%x", cnt, suc)
 
     ## compute the false negative number
     exclude_num = 0

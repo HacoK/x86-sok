@@ -1557,15 +1557,141 @@ def regs_access(instr):
 
 
 
+def _isX86TaintArchitecture():
+    return bbl.BB_ARCH.lower() in {'x86', 'x64'}
+
+
+def _x86TaintRegister(inst, reg):
+    """Use one ID per GPR family, including high-byte aliases."""
+    if not reg:
+        return None
+    name = inst.reg_name(reg).lower()
+    if name in {'ip', 'eip', 'rip', 'flags', 'eflags', 'rflags'}:
+        return None
+    for full, aliases in (
+            ('rax', {'rax', 'eax', 'ax', 'al', 'ah'}),
+            ('rbx', {'rbx', 'ebx', 'bx', 'bl', 'bh'}),
+            ('rcx', {'rcx', 'ecx', 'cx', 'cl', 'ch'}),
+            ('rdx', {'rdx', 'edx', 'dx', 'dl', 'dh'}),
+            ('rsi', {'rsi', 'esi', 'si', 'sil'}),
+            ('rdi', {'rdi', 'edi', 'di', 'dil'}),
+            ('rbp', {'rbp', 'ebp', 'bp', 'bpl'}),
+            ('rsp', {'rsp', 'esp', 'sp', 'spl'})):
+        if name in aliases:
+            return getattr(x86, 'X86_REG_' + full.upper())
+    if name.startswith('r') and name[1:].rstrip('dwb').isdigit():
+        return getattr(x86, 'X86_REG_' + name.rstrip('dwb').upper(), reg)
+    return reg
+
+
+def _x86StackBytes(inst, operand):
+    """Byte locations for a fixed stack operand, or None when unmodeled."""
+    if operand.type != x86.X86_OP_MEM or operand.mem.index or operand.mem.segment:
+        return None
+    base = _x86TaintRegister(inst, operand.mem.base)
+    if base not in {x86.X86_REG_RSP, x86.X86_REG_RBP}:
+        return None
+    return {('x86_stack', base, operand.mem.disp + offset)
+            for offset in range(operand.size)}
+
+
+def _x86ReadTaint(inst, tainted_regs):
+    reads, _ = regs_access(inst)
+    if any(_x86TaintRegister(inst, reg) in tainted_regs for reg in reads):
+        return True
+    # LEA reads addresses, not the contents of a spill slot.
+    if inst.mnemonic != 'lea':
+        for operand in inst.operands:
+            if operand.access & cs.CS_AC_READ:
+                slots = _x86StackBytes(inst, operand)
+                if slots and slots.intersection(tainted_regs):
+                    return True
+    return False
+
+
+def _taintX86RegsCrossBB(ins_lists, tainted_regs, first):
+    normalizer = next((inst for inst in ins_lists if not invalidInst(inst)), None)
+    if normalizer is None:
+        return tainted_regs
+    # Callers may supply a noncanonical register ID when starting analysis.
+    normalized = {_x86TaintRegister(normalizer, item)
+                  if isinstance(item, int) else item for item in tainted_regs}
+    normalized.discard(None)
+    tainted_regs.clear()
+    tainted_regs.update(normalized)
+    for index, inst in enumerate(ins_lists):
+        if invalidInst(inst):
+            continue
+        _, writes = regs_access(inst)
+        seed = first and index == 0
+        taint_read = seed or _x86ReadTaint(inst, tainted_regs)
+        operands = inst.operands
+        # Zeroing idioms read the old register syntactically, but discard it.
+        if (inst.mnemonic in {'xor', 'sub'} and len(operands) == 2
+                and operands[0].type == x86.X86_OP_REG
+                and operands[1].type == x86.X86_OP_REG
+                and operands[0].reg == operands[1].reg):
+            taint_read = False
+
+        for operand in operands:
+            if operand.type != x86.X86_OP_MEM or not operand.access & cs.CS_AC_WRITE:
+                continue
+            slots = _x86StackBytes(inst, operand)
+            stack_taint = {item for item in tainted_regs if isinstance(item, tuple)}
+            if slots:
+                base = next(iter(slots))[1]
+                # RSP and RBP can alias; without a frame relation, a write
+                # invalidates slots tracked through the other base.
+                tainted_regs.difference_update(
+                    item for item in stack_taint if item[1] != base)
+                tainted_regs.difference_update(slots)
+                if (inst.mnemonic == 'mov' and len(operands) == 2
+                        and operands[1].type == x86.X86_OP_REG
+                        and _x86TaintRegister(inst, operands[1].reg) in tainted_regs):
+                    tainted_regs.update(slots)
+            else:
+                # An unmodeled store may alias a spill. Never reuse stale data.
+                tainted_regs.difference_update(stack_taint)
+
+        for reg in writes:
+            canonical = _x86TaintRegister(inst, reg)
+            if canonical is None:
+                continue
+            if canonical in {x86.X86_REG_RSP, x86.X86_REG_RBP}:
+                # A base change gives each displacement a new meaning.
+                tainted_regs.difference_update({
+                    item for item in tainted_regs
+                    if isinstance(item, tuple) and item[1] == canonical})
+            if taint_read:
+                tainted_regs.add(canonical)
+            else:
+                # An 8/16-bit write leaves the upper bytes intact. A 32-bit
+                # write zero-extends in 64-bit mode and kills the whole family.
+                partial = any(op.type == x86.X86_OP_REG and op.reg == reg
+                              and op.size < 4 for op in operands)
+                if not partial:
+                    tainted_regs.discard(canonical)
+    return tainted_regs
+
+
 def instReadRegsIsTaint(inst, tainted_regs):
+    if invalidInst(inst):
+        return False
+    if _isX86TaintArchitecture():
+        normalized = {_x86TaintRegister(inst, item)
+                      if isinstance(item, int) else item for item in tainted_regs}
+        normalized.discard(None)
+        return _x86ReadTaint(inst, normalized)
     (regs_read, _) = regs_access(inst)
     for r in regs_read:
         if r in tainted_regs:
             return True
     return False
 
-# TODO: RAX and ax and al should deem as same register!
 def taintRegsCrossBB(ins_lists, tainted_regs, first = False):
+
+    if _isX86TaintArchitecture():
+        return _taintX86RegsCrossBB(ins_lists, tainted_regs, first)
 
     # initialize the tainted_regs
     if first:

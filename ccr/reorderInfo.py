@@ -264,6 +264,9 @@ class BasicBlocks(Functions):
         resBBType = list()
         now = 0
         now_func = 0
+        # Boundaries refer to the original input blocks. Splitting updates
+        # funcBBCnt for output ownership, so it cannot also delimit this loop.
+        original_func_bb_counts = tuple(self.funcBBCnt)
         for idx in range(len(fixupaddreslist)):
             fixupaddreslist[idx] = fixupaddreslist[idx] + self.getElfParser().getSectionVA(fixupname[idx])
         for idx in range(self.numBasicBlocks):
@@ -310,7 +313,7 @@ class BasicBlocks(Functions):
                 resBBVA.append(self.BBVA)
                 resBBType.append(self.BBType[idx])
 
-            if now == self.funcBBCnt[now_func]:
+            if now == original_func_bb_counts[now_func]:
                 now_func += 1
                 now = 0
 

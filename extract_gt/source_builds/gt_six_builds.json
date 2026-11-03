@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "builds": [
+    {
+      "binary_sha256": "2fd22299b0f76a4348e7810a667266711e929a04076ca7598b8c341c919a02b7",
+      "source_root": "/tmp/x86-sok-glibc227-source",
+      "source_files": ["stdio-common_vfprintf.c"],
+      "dwarf_source_files": {
+        "vfprintf.c": "stdio-common_vfprintf.c",
+        "vfwprintf.c": "stdio-common_vfprintf.c"
+      },
+      "definitions": {"SHARED": 1},
+      "compile_commands": [],
+      "linked_inputs": ["libc-2.27.so"],
+      "contract": [
+        "The original hash-bound binary is a correct compilation of glibc-2.27 stdio-common/vfprintf.c.",
+        "GT covers defined C executions, including the documented glibc GNU C computed-goto extension.",
+        "Source table offsets and label identities are independently bound to original ELF bytes and DWARF metadata."
+      ]
+    },
+    {
+      "binary_sha256": "93bd5414eedaa870b4f7cbb6eeac80b08959f9f4dcc1c1ccdac9169ac0f9d3ef",
+      "source_root": "/mnt/nvme1/CPU2006_source/400.perlbench",
+      "source_files": ["src/**/*.c", "src/**/*.h", "src/**/*.xs", "src/**/*.xsi"],
+      "definitions": {"DOINIT": 1, "PERL_CORE": 1, "SPEC_CPU": 1},
+      "compile_commands": [],
+      "linked_inputs": ["perlbench_base.amd64-m64-gcc81-O1"],
+      "contract": [
+        "The original hash-bound executable is a correct compilation of CPU2006 400.perlbench version 109 with its recorded SPEC configuration.",
+        "GT covers defined C executions; an out-of-bounds object access is outside that domain.",
+        "The complete source use inventory and linked function scan establish that the selected source object has no reachable mutation or pointer escape."
+      ]
+    },
+    {
+      "binary_sha256": "28eb9e607e8689774e4991cf3b530baffd0cf49811664826a7274982d3459684",
+      "source_root": "/mnt/nvme1/CPU2006_source/400.perlbench",
+      "source_files": ["src/**/*.c", "src/**/*.h", "src/**/*.xs", "src/**/*.xsi"],
+      "definitions": {"DOINIT": 1, "PERL_CORE": 1, "SPEC_CPU": 1},
+      "compile_commands": [],
+      "linked_inputs": ["perlbench_base.amd64-m64-gcc81-O2"],
+      "contract": [
+        "The original hash-bound executable is a correct compilation of CPU2006 400.perlbench version 109 with its recorded SPEC configuration.",
+        "GT covers defined C executions; an out-of-bounds object access is outside that domain.",
+        "The complete source use inventory and linked function scan establish that the selected source object has no reachable mutation or pointer escape."
+      ]
+    },
+    {
+      "binary_sha256": "beed5a3635175b542d69784db9afcb02b22392eb42d5407bb66b0d7384459153",
+      "source_root": "/mnt/nvme1/CPU2006_source/400.perlbench",
+      "source_files": ["src/**/*.c", "src/**/*.h", "src/**/*.xs", "src/**/*.xsi"],
+      "definitions": {"DOINIT": 1, "PERL_CORE": 1, "SPEC_CPU": 1},
+      "compile_commands": [],
+      "linked_inputs": ["perlbench_base.amd64-m64-gcc81-O3"],
+      "contract": [
+        "The original hash-bound executable is a correct compilation of CPU2006 400.perlbench version 109 with its recorded SPEC configuration.",
+        "GT covers defined C executions; an out-of-bounds object access is outside that domain.",
+        "The complete source use inventory and linked function scan establish that the selected source object has no reachable mutation or pointer escape."
+      ]
+    },
+    {
+      "binary_sha256": "5d030b0d66d5a975e791a577827df0afe4c78a9ad88829828c4e412dfed8f233",
+      "source_root": "/mnt/nvme1/CPU2006_source/400.perlbench",
+      "source_files": ["src/**/*.c", "src/**/*.h", "src/**/*.xs", "src/**/*.xsi"],
+      "definitions": {"DOINIT": 1, "PERL_CORE": 1, "SPEC_CPU": 1},
+      "compile_commands": [],
+      "linked_inputs": ["perlbench_base.amd64-m64-gcc81-Of"],
+      "contract": [
+        "The original hash-bound executable is a correct compilation of CPU2006 400.perlbench version 109 with its recorded SPEC configuration.",
+        "GT covers defined C executions; an out-of-bounds object access is outside that domain.",
+        "The complete source use inventory and linked function scan establish that the selected source object has no reachable mutation or pointer escape."
+      ]
+    }
+  ]
+}

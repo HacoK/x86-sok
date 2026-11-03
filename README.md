@@ -304,6 +304,11 @@ root@5e8606df7f20:/gt_x86/test# python3 ../../extract_gt/extractXref.py -b test_
 
 Note that the definition of disassembly and x-ref result is in `protobuf_def/blocks.proto` and `protobuf_def/refInf.proto`.
 
+The x86 extractor also writes a `.jumptables.json` provenance sidecar and
+refines jump-table targets using local selector bounds. See
+[jump-table generation](extract_gt/JUMP_TABLES.md) for regeneration, unresolved
+sites, strict output checks and audited selector certificates.
+
 We provide script to extract ground truth in batch. It searchs all the binaries in a directory.
 
 ```console

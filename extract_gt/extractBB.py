@@ -572,12 +572,15 @@ def findIndirectBB(fi, currentBB, binary):
 
         if curBB == None:
             continue
-        if addr in visited:
+        # The same block can be reached with different table-reference state.
+        # Visiting an untainted predecessor must not suppress a later live one.
+        visit_key = (addr, frozenset(cur_tainted_regs), first)
+        if visit_key in visited:
             continue
         cur_bb_num += 1
 
         logging.debug("current bb is 0x%x - 0x%x" % (addr, curBB.VA + curBB.size - curBB.padding))
-        visited.add(addr)
+        visited.add(visit_key)
         startAdr = curBB.offsetFromBase
         endAdr = curBB.size + startAdr - curBB.padding
         virAdr = curBB.VA
@@ -644,7 +647,15 @@ def findIndirectBB(fi, currentBB, binary):
 
         if tmp_blk.is_direct_jump():
             logging.debug("is_direct_jump")
-            successors = getSuccessorsFromDirectInst(tmp_blk, terminorInst)
+            if (bbl.BB_ARCH in {'x86', 'x64'} and terminorInst is not None and
+                    terminorInst.operands and terminorInst.operands[0].type == x86.X86_OP_IMM):
+                # Handwritten metadata can omit the conditional fallthrough.
+                # The decoded branch determines both edges even without a fixup.
+                successors = [terminorInst.operands[0].imm]
+                if terminorInst.mnemonic not in {'jmp', 'ljmp'}:
+                    successors.append(terminorInst.address + terminorInst.size)
+            else:
+                successors = getSuccessorsFromDirectInst(tmp_blk, terminorInst)
             if successors != None:
                 for successor_addr in successors:
                     if successor_addr not in bb_list:
@@ -1853,53 +1864,42 @@ def heuristicSearchingJmptbl(essInfo):
     for jmptbl in jmptbls:
         [jmptbl_entries.add(entry.VA) for entry in jmptbl]
 
-    # split jmptbls
-    potential_fis = list()
+    # Collect every reference before splitting.  A candidate is shared metadata:
+    # consuming it while visiting one reference can discard evidence needed by
+    # another reference (especially around fragments below jmptbl_min_size).
+    potential_fis = []
     for fi in essInfo.getFixupsText():
-        if fi.refTo in jmptbl_entries:
-            logging.info("potential fi is 0x%x, to 0x%x" % (fi.VA, fi.refTo))
-            potential_fis.append(fi)
-        elif bbl.BB_ARCH == 'x86' and (not fi.isRela and (fi.refTo + fi.VA - 2) in jmptbl_entries):
-            logging.info("potential fi is 0x%x, to 0x%x" % (fi.VA, fi.refTo + fi.VA - 2))
-            fi.refTo = fi.refTo + fi.VA - 2
-            potential_fis.append(fi)
+        table_va = fi.refTo
+        if table_va not in jmptbl_entries:
+            if bbl.BB_ARCH != 'x86' or fi.isRela:
+                continue
+            table_va = fi.refTo + fi.VA - 2
+            if table_va not in jmptbl_entries:
+                continue
+        potential_fis.append((fi, table_va))
 
+    # Partition the original runs once, at distinct referenced entry addresses.
+    # Duplicate references never consume a table or introduce another boundary.
+    referenced_starts = set(table_va for _, table_va in potential_fis)
+    tables_by_start = {}
+    for table in jmptbls:
+        boundaries = [idx for idx, entry in enumerate(table)
+                      if entry.VA in referenced_starts]
+        for start, end in zip(boundaries, boundaries[1:] + [len(table)]):
+            if end - start >= jmptbl_min_size:
+                tables_by_start[table[start].VA] = (table[start].derefSz,
+                                                    end - start)
 
-    for fi in potential_fis:
-        idx = 0
-        fi_va = fi.refTo
-        for tbl in jmptbls:
-            start_va = tbl[0].VA
-            end_va = tbl[0].VA + tbl[0].derefSz * len(tbl)
-            if fi_va >= start_va and fi_va < end_va:
-                break
-            idx += 1
-
-        if idx < len(jmptbls):
-            jmptbl = jmptbls[idx]
-            del jmptbls[idx]
-            pre_jmptbls = list()
-            post_jmptbls = list()
-            for entry in jmptbl:
-                if entry.VA < fi_va:
-                    pre_jmptbls.append(entry)
-                else:
-                    post_jmptbls.append(entry)
-
-            if len(pre_jmptbls) >= jmptbl_min_size:
-                jmptbls.append(pre_jmptbls)
-            if len(post_jmptbls) >= jmptbl_min_size:
-                jmptbls.append(post_jmptbls)
-
-    for fi in potential_fis:
-        fi_va = fi.refTo
-        for tbl in jmptbls:
-            if fi_va == tbl[0].VA:
-                fi.jtEntrySz = tbl[0].derefSz
-                fi.numJTEntries = len(tbl)
-                POST_ANA_JMPTBLS += 1
-                logging.info("Found jump table at 0x%x: its jt entries is 0x%x" % \
-                    (fi_va, fi.numJTEntries))
+    for fi, table_va in potential_fis:
+        # Compiler annotations have stronger provenance than this heuristic.
+        # Also makes repeated post-analysis calls idempotent.
+        if fi.numJTEntries > 0 or table_va not in tables_by_start:
+            continue
+        fi.jtEntrySz, fi.numJTEntries = tables_by_start[table_va]
+        fi.refTo = table_va
+        POST_ANA_JMPTBLS += 1
+        logging.info("Found jump table at 0x%x: its jt entries is 0x%x" %
+                     (table_va, fi.numJTEntries))
 
 if __name__ == '__main__':
     parser = optparse.OptionParser()
@@ -1909,10 +1909,25 @@ if __name__ == '__main__':
     parser.add_option("-l", "--log", dest = "log", action="store", type="string", help="log file of the program", default="/tmp/ccr_basicblocks.log")
     parser.add_option("-o", "--output", dest = "output", action = "store", type = "string", help = "output of the jump table proto buf", default = "/tmp/ccr_basicblocks.pb")
     parser.add_option("-s", dest = "split", action = "store_true", help = "split the basic block by call inst", default = False)
+    parser.add_option("--disable-jump-table-analysis", action="store_true", default=False,
+                      help="Keep physical table-entry GT without site-level selector analysis")
+    parser.add_option("--jump-table-certificates", default=None,
+                      help="JSON file of binary-bound audited selector domains")
+    parser.add_option("--source-build-manifest", default=None,
+                      help="Hash-bound source build configuration for source-assisted proofs")
+    parser.add_option("--jump-table-report", default=None,
+                      help="Jump-table provenance JSON (default: OUTPUT.jumptables.json)")
+    parser.add_option("--require-resolved-jump-tables", action="store_true", default=False,
+                      help="Fail if a physical jump table lacks site-level selector evidence")
     (options, args) = parser.parse_args()
     if options.binary == None:
         print('Please input the elf file')
         exit(-1)
+
+    if (options.disable_jump_table_analysis or options.disable_postaa) and (
+            options.jump_table_certificates or options.source_build_manifest or
+            options.require_resolved_jump_tables):
+        parser.error("source assistance/certificates/require-resolved need jump-table analysis")
 
     shuffleInfoBin = None
     if options.metadata == None:
@@ -1974,9 +1989,27 @@ if __name__ == '__main__':
     DISABLE_POST_AA = options.disable_postaa
 
     dumpGroundTruth(essInfo, module, outFile, options.binary, options.split)
-    pbOut = open(options.output, "wb")
-    pbOut.write(module.SerializeToString())
-    pbOut.close()
+    if ELF_ARCH in {'x86', 'x64'} and not (options.disable_jump_table_analysis or options.disable_postaa):
+        from jump_table_gt import refine_jump_tables, write_outputs
+        try:
+            report = refine_jump_tables(
+                options.binary, module, options.jump_table_certificates,
+                options.require_resolved_jump_tables,
+                shuffleInfoBin if os.path.exists(shuffleInfoBin) else None,
+                source_manifest=options.source_build_manifest)
+            write_outputs(module, options.output, report, options.jump_table_report)
+        except ValueError as error:
+            parser.error(str(error))
+        INDIRECT_JMP_CNT = sum(block.type == BlockType.JUMP_TABLE
+                               for function in module.fuc for block in function.bb)
+        logging.info("Jump-table selector analysis: %d resolved, %d physical tables unresolved",
+                     sum(row['status'] == 'resolved' for row in report['sites']),
+                     report['unresolved_physical_tables'])
+    else:
+        if options.jump_table_certificates or options.source_build_manifest or options.require_resolved_jump_tables:
+            parser.error("site-level jump-table analysis currently supports x86 ELF only")
+        with open(options.output, "wb") as pbOut:
+            pbOut.write(module.SerializeToString())
 
     final_gaps_list = checkGapsAtEnd(module, TEXT_RANGE[1])
     countGaps(final_gaps_list)
