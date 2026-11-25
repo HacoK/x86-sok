@@ -1,0 +1,357 @@
+{
+  "expected_row_counts": {
+    "idapro": 200,
+    "sja": 2507
+  },
+  "metrics": [
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61249,
+      "exact_matches": 61249,
+      "false_negative": 0,
+      "false_positive": 0,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_phys",
+      "precision": 1.0,
+      "recall": 1.0,
+      "tool": "ProofJTR",
+      "truth_total": 61249,
+      "wrong_successors": 0
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61249,
+      "exact_matches": 60447,
+      "false_negative": 0,
+      "false_positive": 0,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_feas",
+      "precision": 0.9869059086678966,
+      "recall": 0.9869059086678966,
+      "tool": "ProofJTR",
+      "truth_total": 61249,
+      "wrong_successors": 802
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61242,
+      "exact_matches": 61071,
+      "false_negative": 29,
+      "false_positive": 22,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_phys",
+      "precision": 0.9972077985696091,
+      "recall": 0.9970938301033486,
+      "tool": "IDA Pro 9.0",
+      "truth_total": 61249,
+      "wrong_successors": 149
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61242,
+      "exact_matches": 60289,
+      "false_negative": 29,
+      "false_positive": 22,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_feas",
+      "precision": 0.9844387838411548,
+      "recall": 0.9843262747146893,
+      "tool": "IDA Pro 9.0",
+      "truth_total": 61249,
+      "wrong_successors": 931
+    },
+    {
+      "address_normalized_files": 56,
+      "address_normalized_sites": 7567,
+      "detected_total": 49209,
+      "exact_matches": 48435,
+      "false_negative": 12062,
+      "false_positive": 22,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 2,
+      "filtered_unknown_sites": 2,
+      "ground_truth": "T_phys",
+      "precision": 0.9842711699079437,
+      "recall": 0.7907884210354454,
+      "tool": "Ghidra 12",
+      "truth_total": 61249,
+      "wrong_successors": 752
+    },
+    {
+      "address_normalized_files": 56,
+      "address_normalized_sites": 7567,
+      "detected_total": 49209,
+      "exact_matches": 48016,
+      "false_negative": 12062,
+      "false_positive": 22,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 2,
+      "filtered_unknown_sites": 2,
+      "ground_truth": "T_feas",
+      "precision": 0.9757564673128899,
+      "recall": 0.7839474930202942,
+      "tool": "Ghidra 12",
+      "truth_total": 61249,
+      "wrong_successors": 1171
+    },
+    {
+      "address_normalized_files": 53,
+      "address_normalized_sites": 7076,
+      "detected_total": 50859,
+      "exact_matches": 49207,
+      "false_negative": 10400,
+      "false_positive": 10,
+      "files": 2026,
+      "filtered_call_sites": 3,
+      "filtered_non_jump_sites": 3,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_phys",
+      "precision": 0.9675180400715704,
+      "recall": 0.8033927084523829,
+      "tool": "angr",
+      "truth_total": 61249,
+      "wrong_successors": 1642
+    },
+    {
+      "address_normalized_files": 53,
+      "address_normalized_sites": 7076,
+      "detected_total": 50859,
+      "exact_matches": 48538,
+      "false_negative": 10400,
+      "false_positive": 10,
+      "files": 2026,
+      "filtered_call_sites": 3,
+      "filtered_non_jump_sites": 3,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_feas",
+      "precision": 0.9543640260327573,
+      "recall": 0.7924700811441819,
+      "tool": "angr",
+      "truth_total": 61249,
+      "wrong_successors": 2311
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 32847,
+      "exact_matches": 32713,
+      "false_negative": 28409,
+      "false_positive": 7,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_phys",
+      "precision": 0.9959204798002862,
+      "recall": 0.534098515894137,
+      "tool": "Dyninst",
+      "truth_total": 61249,
+      "wrong_successors": 127
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 32847,
+      "exact_matches": 32480,
+      "false_negative": 28409,
+      "false_positive": 7,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_feas",
+      "precision": 0.9888269857216793,
+      "recall": 0.5302943721530148,
+      "tool": "Dyninst",
+      "truth_total": 61249,
+      "wrong_successors": 360
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61909,
+      "exact_matches": 59482,
+      "false_negative": 80,
+      "false_positive": 740,
+      "files": 2026,
+      "filtered_call_sites": 11550,
+      "filtered_non_jump_sites": 11550,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_phys",
+      "precision": 0.9607972992618198,
+      "recall": 0.9711505493967248,
+      "tool": "SJA",
+      "truth_total": 61249,
+      "wrong_successors": 1687
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61909,
+      "exact_matches": 58739,
+      "false_negative": 80,
+      "false_positive": 740,
+      "files": 2026,
+      "filtered_call_sites": 11550,
+      "filtered_non_jump_sites": 11550,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_feas",
+      "precision": 0.9487958132097111,
+      "recall": 0.9590197390977812,
+      "tool": "SJA",
+      "truth_total": 61249,
+      "wrong_successors": 2430
+    }
+  ],
+  "overall_passed": true,
+  "paper_sentence": "Every discrepancy between any evaluated tool and x86-sok was audited under the identical protocol: the same frozen physical truth, the same hash-bound clean-room refinement, and the same extract_gt jump-table validator.",
+  "physical_error_audits": {
+    "angr": {
+      "audit_outcome_counts": {
+        "confirmed_false_negative": 10400,
+        "confirmed_false_positive": 10,
+        "confirmed_wrong_successors": 1627,
+        "resolved_by_clean_room_refinement": 15
+      },
+      "physical_category_counts": {
+        "false_negative": 10400,
+        "false_positive": 10,
+        "wrong_successors": 1642
+      },
+      "physical_incorrect_rows": 12052,
+      "tool": "angr",
+      "truth_target_set_changed_rows": 128
+    },
+    "dyninst": {
+      "audit_outcome_counts": {
+        "confirmed_false_negative": 28409,
+        "confirmed_false_positive": 7,
+        "confirmed_wrong_successors": 127
+      },
+      "physical_category_counts": {
+        "false_negative": 28409,
+        "false_positive": 7,
+        "wrong_successors": 127
+      },
+      "physical_incorrect_rows": 28543,
+      "tool": "Dyninst",
+      "truth_target_set_changed_rows": 576
+    },
+    "ghidra": {
+      "audit_outcome_counts": {
+        "confirmed_false_negative": 12062,
+        "confirmed_false_positive": 22,
+        "confirmed_wrong_successors": 585,
+        "resolved_by_clean_room_refinement": 167
+      },
+      "physical_category_counts": {
+        "false_negative": 12062,
+        "false_positive": 22,
+        "wrong_successors": 752
+      },
+      "physical_incorrect_rows": 12836,
+      "tool": "Ghidra 12",
+      "truth_target_set_changed_rows": 238
+    },
+    "idapro": {
+      "audit_outcome_counts": {
+        "confirmed_false_negative": 29,
+        "confirmed_false_positive": 22,
+        "confirmed_wrong_successors": 141,
+        "resolved_by_clean_room_refinement": 8
+      },
+      "physical_category_counts": {
+        "false_negative": 29,
+        "false_positive": 22,
+        "wrong_successors": 149
+      },
+      "physical_incorrect_rows": 200,
+      "tool": "IDA Pro 9.0",
+      "truth_target_set_changed_rows": 34
+    },
+    "proofjtr": {
+      "audit_outcome_counts": {},
+      "physical_category_counts": {},
+      "physical_incorrect_rows": 0,
+      "tool": "ProofJTR",
+      "truth_target_set_changed_rows": 0
+    },
+    "sja": {
+      "audit_outcome_counts": {
+        "confirmed_false_negative": 80,
+        "confirmed_false_positive": 740,
+        "confirmed_wrong_successors": 1673,
+        "resolved_by_clean_room_refinement": 14
+      },
+      "physical_category_counts": {
+        "false_negative": 80,
+        "false_positive": 740,
+        "wrong_successors": 1687
+      },
+      "physical_incorrect_rows": 2507,
+      "tool": "SJA",
+      "truth_target_set_changed_rows": 785
+    }
+  },
+  "protocol": "The unchanged positive jump-only comparator scores each tool against T_phys and T_feas. Every T_phys incorrect row is then re-evaluated against the hash-bound T_feas protobuf and its extract_gt jump-table sidecar.",
+  "refinement_verification": {
+    "analysis_sites": 100080,
+    "binary_hash_mismatches": 0,
+    "comparator": "/mnt/nvme1/sba/tools/compare_jump_table_results.py",
+    "comparator_sha256": "cdc015c755f7bd4f275fb24d5f5ad130fff61fbe9e6ce70a58a746eff5648622",
+    "created": 1942,
+    "failed": 0,
+    "files": 2026,
+    "generator_sha256": {
+      "BlockUtil.py": "f07dfa5d7bebff31b1fb310ed4e3567edd5fc21c7b34a4fcd26d7e8eaf4ee5a1",
+      "ccr/reorderInfo.py": "6dc22f35cf7c1eb2fab19ef824cb63e157f38a0881762e6db7007f360f1a2e23",
+      "extractBB.py": "e7a9625cdce92634b15ca5bc8d8fdd0aa1543d3dcd6ac88596070067779b0491",
+      "jump_table_analysis.py": "55ef6cdb9d74c2b72fa81c182a9f5e1a4079609778187988dc1f621e0134efdb",
+      "jump_table_constants.py": "cd531f59d6d89cbbcaaca4b7f678018dfbd7ecd3e84c846800218429bcd1d82b",
+      "jump_table_data_invariants.py": "d48844db3f05e4e0c1d59a5b20a20f2060d3f9e492b57bfacf9b7ea635c26134",
+      "jump_table_dataflow.py": "1f826bd9e0b6a52354109560e1767fe09e57ef6f984c9956181b405e03cd5340",
+      "jump_table_gt.py": "05a96ee77a040be066b9bc0d25313c46bc6557a9ab10b9d9df76821dffbb7ba9",
+      "jump_table_loop_invariants.py": "f49cd4d6bdadfb68d6bee161c083c5aec07536e69167ef2c3544f87cc9048bde",
+      "jump_table_proofs.py": "77900581a176077fe6ea3d073ede9bed0d8180543a8ddf2c21ab6e4103618040",
+      "jump_table_reaching.py": "5dfb6411cca90bbd671bc9c16916e91147903d978c9b492b8aea73924ecc31dc",
+      "jump_table_source.py": "aa6f16384a8a1602bc53da5824a4804bd2f635e171c099dd2a5147274d1df6a7"
+    },
+    "manifest": "/mnt/nvme1/sba/tmp/x86-sok-corpus1-refined/refinement_manifest.csv",
+    "manifest_sha256": "0530eb6b85dc40bb321f559899faaecfce4912159a57a666f4f4b65fa33a03f9",
+    "missing_outputs": 0,
+    "physical_root": "/mnt/nvme1/sba/x86_dataset_stripped_x64_ground_truth",
+    "protobuf_hash_mismatches": 0,
+    "refined_root": "/mnt/nvme1/sba/tmp/x86-sok-corpus1-refined",
+    "refined_type7_sites": 61249,
+    "reused": 84,
+    "site_action_counts": {
+      "confirmed": 34193,
+      "preserved_physical_table": 26254,
+      "refined": 802,
+      "unresolved": 38831
+    },
+    "site_status_counts": {
+      "resolved": 34995,
+      "unresolved": 65085
+    },
+    "target_set_mismatches": 0
+  }
+}

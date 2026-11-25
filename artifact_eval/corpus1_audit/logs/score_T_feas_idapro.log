@@ -1,0 +1,1 @@
+$ /usr/bin/python3.12 /mnt/nvme1/sba/tools/compare_jump_table_results.py /mnt/nvme1/sba/experiment/idapro/jt_results --dataset-root /mnt/nvme1/sba/tmp/x86-sok-corpus1-refined --site-filter jumps-only --json
