@@ -62,6 +62,16 @@ class MetadataFunctionOwnershipTests(unittest.TestCase):
         self.assertEqual(state.funcBBCnt, [1, 1])
         self.assertEqual(state.numBBs, 2)
         self.assertEqual(state.BBOffsetFromSection, [0x1000, 0x2000])
+        self.assertEqual(state.BBVA, [0x1000, 0x2000])
+
+    def test_split_fixup_membership_does_not_rescan_the_address_list(self):
+        class FixupAddressList(list):
+            def count(self, _value):
+                raise AssertionError('fixup membership must use a hash set')
+
+        state = metadata([1], [10], [[0x1004, 0x1008]])
+        state.block_check(FixupAddressList([0x1002, 0x1006]), ['.text', '.text'])
+        self.assertEqual(state.BBFixupCnt, [1, 1])
 
 
 if __name__ == '__main__':

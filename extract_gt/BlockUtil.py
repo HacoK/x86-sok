@@ -21,6 +21,8 @@ import random
 import string
 import traceback
 import os
+import mmap
+from collections import OrderedDict
 import bbinfoconfig as bbl
 import mipsRegsAcc as mipsAcc
 
@@ -29,6 +31,34 @@ RelocationList = list()
 RelocationName = dict()
 # store the valid loaded address range
 LOAD_RANGE = list()
+
+_BINARY_MMAPS = OrderedDict()
+_CAPSTONE_DECODERS = {}
+
+
+def read_binary_range(path, start, end):
+    """Copy one byte range through a small shared read-only mmap cache."""
+    path = os.path.abspath(os.fspath(path))
+    stat = os.stat(path)
+    identity = (stat.st_size, stat.st_mtime_ns)
+    cached = _BINARY_MMAPS.get(path)
+    if cached is not None and cached[0] != identity:
+        cached[1].close()
+        cached = None
+    if cached is None:
+        descriptor = os.open(path, os.O_RDONLY)
+        try:
+            mapped = mmap.mmap(descriptor, 0, access=mmap.ACCESS_READ)
+        finally:
+            os.close(descriptor)
+        cached = (identity, mapped)
+        _BINARY_MMAPS[path] = cached
+    _BINARY_MMAPS.move_to_end(path)
+    while len(_BINARY_MMAPS) > 4:
+        _, (_, old_mapping) = _BINARY_MMAPS.popitem(last=False)
+        old_mapping.close()
+    start, end = max(0, start), min(cached[1].size(), end)
+    return cached[1][start:end] if start < end else b""
 
 def randomString(stringLength=10):
     """Generate a random string of fixed length """
@@ -577,8 +607,13 @@ args:
     elf_class: 64 or 32
 '''
 def init_capstone(elf_class):
-    md = None
-    md = cs.Cs(bbl.BB_CS_MODE_1, bbl.BB_CS_MODE_2 + bbl.BB_ENDIAN)
+    base_mode = bbl.BB_CS_MODE_2 + bbl.BB_ENDIAN
+    key = (bbl.BB_CS_MODE_1, base_mode, bbl.BB_ARCH)
+    md = _CAPSTONE_DECODERS.get(key)
+    if md is not None:
+        md.mode = base_mode
+        return md
+    md = cs.Cs(*key[:2])
     """
     if elf_class == 64:
         md = cs.Cs(cs.CS_ARCH_X86, cs.CS_MODE_64)
@@ -599,6 +634,7 @@ def init_capstone(elf_class):
         md.skipdata_setup = (".unhandled", None, None)
         md.skipdata = True
     md.detail = True
+    _CAPSTONE_DECODERS[key] = md
     return md
 
 def split_block(bb, binary, split, elf_class,elf_arch):
@@ -616,115 +652,6 @@ def split_block(bb, binary, split, elf_class,elf_arch):
     logging.debug("bb.VA is 0x%x, bb.BaseOff is 0x%x, bb.size is 0x%x, bb.padding is 0x%x" %(bb.VA,bb.offsetFromBase,bb.size,bb.padding))
     result.append(Blk(bb.VA, bb.offsetFromBase, bb.size + bb.offsetFromBase - bb.padding, bb, bb.hasFallThrough))
     return result
-
-    start_adr = bb.offsetFromBase
-    end_adr = bb.size + start_adr - bb.padding
-    if split == False and bb.assembleType == 0 and elf_arch == 'X86':
-        #logging.debug("Range is 0x%x - 0x%x, bb.size 0x%x is bb.padding is 0x%x" %(start_adr,end_adr,bb.size,bb.padding))
-        # some bug that in ccr
-        jmp_inst = list()
-        with open(binary, 'rb') as infile:
-            readdata = infile.read(end_adr)
-            bbdata = readdata[start_adr:]
-            md = init_capstone(elf_class)
-            if(bb.type & (1 << 6) == 64):
-                md.mode = bbl.BB_CS_MODE_3
-            else:
-                md.mode = bbl.BB_CS_MODE_2
-            inslist = md.disasm(bbdata, bb.VA)
-            block_start = start_adr
-            block_end = end_adr
-            last_inst = None
-            inst_idx = 0
-            for i in inslist:
-                if bbl.BB_JUMP_FLAG in i.groups:
-                    if i.mnemonic == "bl" or i.mnemonic == "blr":
-                        continue
-                #if x86.X86_GRP_JUMP in i.groups:
-                    inst_idx += 1
-                    jmp_inst.append(i)
-
-            current_addr = bb.VA
-            current_start_addr = start_adr
-            if len(jmp_inst) > 0:
-                for jmp in jmp_inst:
-                    end_addr = jmp.address + jmp.size - bb.VA + bb.offsetFromBase
-                    fall_through = False
-                    if bbl.BB_CS_MODE_1 == cs.CS_ARCH_X86 and 'jmp' not in jmp.mnemonic.lower():
-                        fall_through = True
-                    result.append(Blk(current_addr, current_start_addr, end_addr, bb, fall_through))
-                    current_addr = jmp.address + jmp.size
-                    current_start_addr = end_addr
-            if current_start_addr != block_end:
-                result.append(Blk(current_addr, current_start_addr, block_end, bb, bb.hasFallThrough))
-        return result
-
-    jmp_targets = list()
-    # Here we split the basic block in two situations:
-    #   S1: we split the basic block by `call` instruction, that is split == True
-    #   S2: if the basic block is `dummy`, that is the basic block contains inline
-    #       assemble code or the `basic block` is in handwritten assemble file
-    with open(binary, 'rb') as infile:
-        readdata = infile.read(end_adr)
-        bbdata = readdata[start_adr:]
-        md = init_capstone(elf_class)
-        if(bb.size & (1 << 6) == 64):
-            md.mode = bbl.BB_CS_MODE_3
-        else:
-            md.mode = bbl.BB_CS_MODE_2
-        inslist = md.disasm(bbdata, bb.VA)
-        block_start = start_adr
-        block_end = start_adr
-        last_inst = None
-        for i in inslist:
-            last_inst = i
-            block_end += i.size
-
-            if invalidInst(i):
-                continue
-            if split == True and bbl.BB_CALL_FLAG in i.groups:
-            #if split == True and x86.X86_GRP_CALL in i.groups:
-                # block offset from binary file,
-                # We deem call instruction fall through
-                result.append(Blk(bb.VA + block_start - start_adr, block_start, block_end, bb, True))
-                logging.info("[Split block]: new block is split by call: addr %x, offset is %x - %x" % \
-                        (bb.VA + block_start-start_adr, block_start, block_end))
-                block_start = block_end
-
-            # for inline assemble and handwritten assemble file,
-            # the `basic block` is not the real basic block
-            elif isTerminator(i):
-                fall_through = True
-                # FIXME: if the jump instruction is fall through
-                #TODO(ztt) arm have no ret
-                if 'jmp' in i.mnemonic.lower() or bbl.BB_RET_FLAG in i.groups or (bbl.BB_RET_FLAG == - 1 and armRet(i)):
-                #if 'jmp' in i.mnemonic.lower() or x86.X86_GRP_RET in i.groups:
-                    fall_through = False
-                result.append(Blk(bb.VA + block_start - start_adr, block_start, block_end, bb, fall_through))
-                logging.info("[Split block]: `dummy` block is split by jmp: addr %x, offset is %x - %x" % \
-                        (bb.VA + block_start - start_adr, block_start, block_end))
-                block_start = block_end
-
-
-        if block_end != end_adr:
-            logging.error("Basic block split Error: bb %x-%x. Last instruction is %s"
-                    % (bb.VA, bb.VA + bb.size - bb.padding, getInstStr(last_inst)))
-
-        if block_end != block_start:
-            result.append(Blk(block_start - start_adr + bb.VA, block_start, end_adr, bb, bb.hasFallThrough))
-            logging.info("[Split block]: new block addr %x, offset is %x - %x" % \
-                        (bb.VA + block_start-start_adr, block_start, end_adr))
-        # For handwritten assemble code,
-        # we need to confirm the FALLTHROUGH or not manuanlly
-        if last_inst != None and bb.assembleType == 2 \
-                and not isTerminator(i):
-            # set the last basic block as FALLTHROUGH
-            result[-1].fall_through = True
-
-    return result
-'''
-readelf class: 32 bit or 64 bit
-'''
 def readElfClass(binary):
     result = 64
     with open(binary, 'rb') as openFile:
@@ -1098,60 +1025,29 @@ def checkGapsAtEnd(module, sec_end_addr):
             gaps_num += 1
     return range_not_included
 
-def disassembleBB(blk, binary, elf_class, one_inst = False):
-    """
-    disassemble the binary code from the startadr to endadr.
-
-    args:
-        blk:
-        binary:
-        elf_class: 32 or 64 bits
-        one_inst: only disassemble one instruction and return
-
-    rets:
-        instruction list
-    """
-    viradr = blk.VA
-    startadr = blk.start
-    endadr = blk.end
-    Type = blk.parent.type
-    inslist = None
-    with open(binary, 'rb') as infile:
-        readdata = infile.read(endadr)
-        bbdata = readdata[startadr:]
-        md = init_capstone(elf_class)
-        if(Type & (1 << 6) == 64):
-            md.mode = bbl.BB_CS_MODE_3
-        else:
-            md.mode = bbl.BB_CS_MODE_2
-        current_addr = viradr
-        end_vir_addr = viradr + endadr - startadr
-        inslist = list()
-        while current_addr < end_vir_addr:
-            #logging.info(f"HELLO, current address is 0x%x, the bytes is %s" % (current_addr, ''.join('{:02x}'.format(x) for x in bbdata)))
-            disasm_result = md.disasm(bbdata, current_addr, count = 1)
-            try:
-                cur_inst = next(disasm_result)
-            except StopIteration:
-                break
-
-
-            if invalidInst(cur_inst):
-                logging.error("Instructions that capstone can't handled. 0x%x" %
-                        (cur_inst.address))
-
-            current_addr += cur_inst.size
-            bbdata = bbdata[cur_inst.size:]
-            inslist.append(cur_inst)
-            
-            if one_inst:
-                return inslist
-
-        # check if the basic block is disassembled correctlly
-        if current_addr < end_vir_addr:
-            logging.error("OMG, The basic block 0x%x - 0x%x is not correctly handled" %
-                    (blk.VA, blk.VA + blk.end - blk.start))
-    return inslist
+def disassembleBB(blk, binary, elf_class, one_inst=False):
+    """Decode a metadata block in one Capstone pass."""
+    start, end = blk.start, blk.end
+    code = read_binary_range(binary, start, end)
+    decoder = init_capstone(elf_class)
+    if blk.parent.type & (1 << 6) == 64:
+        decoder.mode = bbl.BB_CS_MODE_3
+    else:
+        decoder.mode = bbl.BB_CS_MODE_2
+    instructions = list()
+    virtual_end = blk.VA + end - start
+    for instruction in decoder.disasm(code, blk.VA,
+                                      count=1 if one_inst else 0):
+        if invalidInst(instruction):
+            logging.error("Instructions that capstone can't handled. 0x%x" %
+                          instruction.address)
+        instructions.append(instruction)
+        if one_inst:
+            return instructions
+    if instructions and instructions[-1].address + instructions[-1].size < virtual_end:
+        logging.error("OMG, The basic block 0x%x - 0x%x is not correctly handled" %
+                      (blk.VA, virtual_end))
+    return instructions
 
 '''
 capstone can't handle some instructions
@@ -1181,10 +1077,7 @@ def recursiveDisassembleInRange(binary, gap_start,
     gap_end = gap_start + end - start
 
     task.append((entry, function))
-    open_file = open(binary, 'rb')
-    read_data = open_file.read(end)
-    open_file.close()
-    gap_data = read_data[start:]
+    gap_data = read_binary_range(binary, start, end)
     logging.debug("[recursive disassembling instruction]: current offset is 0x%x" % entry)
 
     # capstone initialization
@@ -1294,6 +1187,7 @@ def recursiveDisassembleInRange(binary, gap_start,
     visited = set()
     # store (next disassemble address, function that this address belongs to)
     task = list() 
+    pending = set()
     # the result of blk list
     blk_list = list()
     current_blk = None
@@ -1302,14 +1196,20 @@ def recursiveDisassembleInRange(binary, gap_start,
     gap_end = gap_start + end - start
 
     task.append((entry, function))
-    open_file = open(binary, 'rb')
-    read_data = open_file.read(end)
-    open_file.close()
-    gap_data = read_data[start:]
+    pending.add(entry)
+    gap_data = read_binary_range(binary, start, end)
     logging.debug("[recursive disassembling instruction]: current offset is 0x%x" % entry)
 
     # capstone initialization
     md = init_capstone(elf_class)
+
+    def enqueue_offset(offset, owner):
+        if not isInRange(offset, [(0, end - start)]) or offset in visited:
+            return
+        if offset in pending:
+            return
+        pending.add(offset)
+        task.append((offset, owner))
 
     # recursive disassemble begins
     while True:
@@ -1319,6 +1219,7 @@ def recursiveDisassembleInRange(binary, gap_start,
             break
 
         (current_offset , current_function) = task.pop(-1)
+        pending.discard(current_offset)
 
         if current_offset in visited:
             continue
@@ -1344,9 +1245,7 @@ def recursiveDisassembleInRange(binary, gap_start,
 
         # add fallthrough target address
         if isFallThrough(cur_inst):
-            if (current_offset + cur_inst.size) not in visited and \
-                isInRange(current_offset + cur_inst.size, [(0, end-start)]):
-                task.append((current_offset + cur_inst.size, current_function))
+            enqueue_offset(current_offset + cur_inst.size, current_function)
 
         if isTerminator(cur_inst):
             blk_list.append(current_blk)
@@ -1373,9 +1272,9 @@ def recursiveDisassembleInRange(binary, gap_start,
                     # it only knows the offset inside this region
                     # so it may be the error of the disassembling
                     # we need to double check here manually
-                    if target >= gap_end and target < gap_start:
+                    if target < gap_start or target >= gap_end:
                         logging.error("[Recursive disassembling in Gaps]: the jump/call target address is out of range! instruction is 0x%x: %s" % 
-                                (cur_inst, getInstStr(cur_inst)))
+                                (cur_inst.address, getInstStr(cur_inst)))
                         current_blk = None
                         continue
                     # get the target address offset from the gap start
@@ -1383,10 +1282,10 @@ def recursiveDisassembleInRange(binary, gap_start,
                     current_blk.add_successor(target)
                     if bbl.BB_CALL_FLAG in cur_inst.groups:
                     #if x86.X86_GRP_CALL in cur_inst.groups:
-                        task.append((target_offset, target))
+                        enqueue_offset(target_offset, target)
                         current_blk.type = BlockType.DIRECT_CALL
                     else:
-                        task.append((target_offset, current_function))
+                        enqueue_offset(target_offset, current_function)
                         current_blk.type = BlockType.DIRECT_BRANCH
             current_blk = None
     return blk_list

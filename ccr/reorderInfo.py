@@ -248,7 +248,7 @@ class BasicBlocks(Functions):
     def count_fixup(self,left,right,fixupaddreslist):
         res = 0
         for pc in range(left,right,0x2):
-            if(fixupaddreslist.count(pc) > 0):
+            if pc in fixupaddreslist:
                 res += 1
         return res
 
@@ -269,6 +269,7 @@ class BasicBlocks(Functions):
         original_func_bb_counts = tuple(self.funcBBCnt)
         for idx in range(len(fixupaddreslist)):
             fixupaddreslist[idx] = fixupaddreslist[idx] + self.getElfParser().getSectionVA(fixupname[idx])
+        fixup_address_set = set(fixupaddreslist)
         for idx in range(self.numBasicBlocks):
             now += 1
             (res,cond) = self.multi_jump(idx)
@@ -285,7 +286,7 @@ class BasicBlocks(Functions):
                     # last is the fisrt instruction address of the BB
                     cnt = cnt + 1
 
-                    resBBFixupCnt.append(self.count_fixup(last,pc,fixupaddreslist))
+                    resBBFixupCnt.append(self.count_fixup(last,pc,fixup_address_set))
                     resBBOffsetFromSection.append(last - self.BBVA[idx] + self.BBOffsetFromSection[idx])
                     resBBSec.append(self.BBSec[idx]) # same section
                     if cnt == len(res):
@@ -310,7 +311,7 @@ class BasicBlocks(Functions):
                 resBBSec.append(self.BBSec[idx])
                 resBBPadding.append(self.BBPadding[idx])
                 resBBAssembleType.append(self.BBAssembleType[idx])
-                resBBVA.append(self.BBVA)
+                resBBVA.append(self.BBVA[idx])
                 resBBType.append(self.BBType[idx])
 
             if now == original_func_bb_counts[now_func]:

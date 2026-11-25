@@ -103,10 +103,9 @@ class JumpTableAssociationTests(unittest.TestCase):
         self.assertIsNone(associate(entry.VA, entry, b""))
         self.assertNotIn(fallthrough.VA, visits)
 
-    def test_revisits_join_when_second_path_carries_target_register(self):
-        # Both paths keep live table-related taint, but only the second reaches
-        # the join with the register consumed by its indirect jump. Visiting
-        # solely by address drops that second path and loses the table site.
+    def test_merges_join_taint_states_when_second_path_carries_target(self):
+        # Both paths represent possible executions. A may-taint analysis merges
+        # their facts at the join instead of retaining and replaying both paths.
         entry = block(0x1000, BlockTypes.DIRECT_BRANCH, (0x1010, 0x1020))
         first = block(0x1010, BlockTypes.DIRECT_BRANCH, (0x1030,),
                       writes={"table-base"})
@@ -115,7 +114,7 @@ class JumpTableAssociationTests(unittest.TestCase):
         join = block(0x1030, BlockTypes.INDIRECT_BRANCH, consumes="jump-target")
         associate, visits = load_association([entry, first, second, join])
         self.assertIs(associate(entry.VA, entry, b""), join)
-        self.assertEqual(visits.count(join.VA), 2)
+        self.assertEqual(visits.count(join.VA), 1)
 
     def test_repeated_state_on_cycle_terminates(self):
         entry = block(0x1000, BlockTypes.DIRECT_BRANCH, (0x1010,))

@@ -553,34 +553,51 @@ def findIndirectBB(fi, currentBB, binary):
                 return bb
         return None
 
-    queueList = list()
+    from collections import deque
+
+    queueList = deque()
     queueList.append((currentBB,currentBB.VA))
-    visited = set()
     cur_bb_num = 0
 
     # tainted registers from jump table fixup
     # we assume the relationship between jmptbl fixup to the indirect jump
     # only popluates between regs
-    queue_tainted_regs = list()
+    queue_tainted_regs = deque()
     queue_tainted_regs.append(set())
 
+    # May-taint dataflow merges facts by union at CFG joins.  Exploring every
+    # incomparable path fact explodes on switch-heavy C++ binaries.
+    merged_states = {}
+
     first = True
+    def enqueue_state(successor_addr, tainted_regs):
+        successor = (bb_list.get(successor_addr) if successor_addr in bb_list
+                     else find_bbl_include(successor_addr))
+        if successor is None:
+            return
+        key = (successor_addr, False)
+        prior_state = merged_states.get(key, set())
+        merged_state = prior_state | set(tainted_regs)
+        if merged_state == prior_state:
+            return
+        merged_states[key] = merged_state
+        queueList.append((successor, successor_addr))
+        queue_tainted_regs.append(merged_state)
+
     while len(queueList) > 0:
-        (curBB,addr) = queueList.pop(0)
-        cur_tainted_regs = queue_tainted_regs.pop(0)
+        (curBB,addr) = queueList.popleft()
+        cur_tainted_regs = queue_tainted_regs.popleft()
         logging.debug("current taint regs is {}".format(cur_tainted_regs))
 
         if curBB == None:
             continue
-        # The same block can be reached with different table-reference state.
-        # Visiting an untainted predecessor must not suppress a later live one.
-        visit_key = (addr, frozenset(cur_tainted_regs), first)
-        if visit_key in visited:
+        state_key = (addr, first)
+        if cur_tainted_regs < merged_states.get(state_key, set()):
             continue
+        cur_tainted_regs = merged_states.setdefault(state_key, cur_tainted_regs)
         cur_bb_num += 1
 
         logging.debug("current bb is 0x%x - 0x%x" % (addr, curBB.VA + curBB.size - curBB.padding))
-        visited.add(visit_key)
         startAdr = curBB.offsetFromBase
         endAdr = curBB.size + startAdr - curBB.padding
         virAdr = curBB.VA
@@ -617,32 +634,17 @@ def findIndirectBB(fi, currentBB, binary):
                 elif curBB.VA in jumpTable:
                     logging.debug("Jumptable Now")
                     for successor_addr in jumpTable[curBB.VA]:
-                        if successor_addr in bb_list: # TODO(ztt): handle this
-                            logging.info("add successor 0x%x of jump table 0x%x" % (successor_addr, curBB.VA))
-
-                            queueList.append((bb_list[successor_addr],successor_addr))
-                            suc_bb = bb_list[successor_addr]
-                            logging.debug("Add successor 0x%x - 0x%x" %(successor_addr,suc_bb.VA + suc_bb.size - suc_bb.padding))
-                            queue_tainted_regs.append(updated_tainted_regs.copy())
+                        # TODO(ztt): handle jump-table successors outside metadata.
+                        logging.info("add successor 0x%x of jump table 0x%x" %
+                                     (successor_addr, curBB.VA))
+                        enqueue_state(successor_addr, updated_tainted_regs)
             else:
                 continue
 
         if tmp_blk.type == BlockType.FALL_THROUGH:
             successor_addr = curBB.VA + curBB.size
             logging.debug("BlockType.FALL_THROUGH")
-            if successor_addr not in bb_list:
-                suc_bb = find_bbl_include(successor_addr)
-                if suc_bb != None:
-                    logging.debug("Add successor 0x%x - 0x%x" %(successor_addr,suc_bb.VA + suc_bb.size - suc_bb.padding))
-                    queueList.append((suc_bb,successor_addr))
-                    queue_tainted_regs.append(updated_tainted_regs.copy())
-                else:
-                    logging.error("472:successor addr %x not in basic block list" % (successor_addr))
-            else:
-                queueList.append((bb_list[successor_addr],successor_addr))
-                suc_bb = bb_list[successor_addr]
-                logging.debug("Add successor 0x%x - 0x%x" %(successor_addr,suc_bb.VA + suc_bb.size - suc_bb.padding))
-                queue_tainted_regs.append(updated_tainted_regs.copy())
+            enqueue_state(successor_addr, updated_tainted_regs)
             continue
 
         if tmp_blk.is_direct_jump():
@@ -658,36 +660,12 @@ def findIndirectBB(fi, currentBB, binary):
                 successors = getSuccessorsFromDirectInst(tmp_blk, terminorInst)
             if successors != None:
                 for successor_addr in successors:
-                    if successor_addr not in bb_list:
-                        logging.debug("Strange successor is 0x%x" %successor_addr)
-                        suc_bb = find_bbl_include(successor_addr)
-                        if suc_bb != None:
-                            logging.debug("Add successor 0x%x - 0x%x" %(successor_addr,suc_bb.VA + suc_bb.size - suc_bb.padding))
-                            queueList.append((suc_bb,successor_addr))
-                            queue_tainted_regs.append(updated_tainted_regs.copy())
-                    else:
-                        logging.debug("Orignal is 0x%x" %successor_addr)
-                        queueList.append((bb_list[successor_addr],successor_addr))
-                        suc_bb = bb_list[successor_addr]
-                        logging.debug("Add successor 0x%x - 0x%x" %(successor_addr,suc_bb.VA + suc_bb.size - suc_bb.padding))
-                        queue_tainted_regs.append(updated_tainted_regs.copy())
+                    enqueue_state(successor_addr, updated_tainted_regs)
 
         elif tmp_blk.fall_through:
             successor_addr = curBB.VA + curBB.size
             logging.debug("tmp_blk.fall_through")
-            if successor_addr not in bb_list:
-                suc_bb = find_bbl_include(successor_addr)
-                if suc_bb != None:
-                    logging.debug("Add successor 0x%x - 0x%x" %(successor_addr,suc_bb.VA + suc_bb.size - suc_bb.padding))
-                    queueList.append((suc_bb,successor_addr))
-                    queue_tainted_regs.append(updated_tainted_regs.copy())
-                else:
-                    logging.error("494:successor addr %x not in basic block list" % (successor_addr))
-            else:
-                queueList.append((bb_list[successor_addr],successor_addr))
-                suc_bb = bb_list[successor_addr]
-                logging.debug("Add successor 0x%x - 0x%x" %(successor_addr,suc_bb.VA + suc_bb.size - suc_bb.padding))
-                queue_tainted_regs.append(updated_tainted_regs.copy())
+            enqueue_state(successor_addr, updated_tainted_regs)
         elif tmp_blk.is_call == False and tmp_blk.type == BlockType.RET:
             logging.warning("The basic block %x-%x end up with ret!. its instruction is %s" %
                     (curBB.VA, curBB.VA + curBB.size - curBB.padding, getInstStr(terminorInst)))
