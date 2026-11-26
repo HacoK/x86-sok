@@ -1,0 +1,348 @@
+{
+  "audits": {
+    "angr": {
+      "outcome_counts": {
+        "confirmed_false_negative": 10400,
+        "confirmed_false_positive": 10,
+        "confirmed_wrong_successors": 1616,
+        "resolved_by_guarded_feasibility": 13
+      },
+      "physical_category_counts": {
+        "false_negative": 10400,
+        "false_positive": 10,
+        "wrong_successors": 1629
+      },
+      "physical_error_rows": 12039,
+      "tool": "angr"
+    },
+    "dyninst": {
+      "outcome_counts": {
+        "confirmed_false_negative": 28409,
+        "confirmed_false_positive": 7,
+        "confirmed_wrong_successors": 124
+      },
+      "physical_category_counts": {
+        "false_negative": 28409,
+        "false_positive": 7,
+        "wrong_successors": 124
+      },
+      "physical_error_rows": 28540,
+      "tool": "Dyninst"
+    },
+    "ghidra": {
+      "outcome_counts": {
+        "confirmed_false_negative": 12062,
+        "confirmed_false_positive": 22,
+        "confirmed_wrong_successors": 577,
+        "resolved_by_guarded_feasibility": 172
+      },
+      "physical_category_counts": {
+        "false_negative": 12062,
+        "false_positive": 22,
+        "wrong_successors": 749
+      },
+      "physical_error_rows": 12833,
+      "tool": "Ghidra 12"
+    },
+    "idapro": {
+      "outcome_counts": {
+        "confirmed_false_negative": 29,
+        "confirmed_false_positive": 22,
+        "confirmed_wrong_successors": 120,
+        "resolved_by_guarded_feasibility": 4
+      },
+      "physical_category_counts": {
+        "false_negative": 29,
+        "false_positive": 22,
+        "wrong_successors": 124
+      },
+      "physical_error_rows": 175,
+      "tool": "IDA Pro 9.0"
+    },
+    "proofjtr": {
+      "outcome_counts": {
+        "confirmed_wrong_successors": 7,
+        "resolved_by_guarded_feasibility": 18
+      },
+      "physical_category_counts": {
+        "wrong_successors": 25
+      },
+      "physical_error_rows": 25,
+      "tool": "ProofJTR"
+    },
+    "sja": {
+      "outcome_counts": {
+        "confirmed_false_negative": 80,
+        "confirmed_false_positive": 740,
+        "confirmed_wrong_successors": 1655,
+        "resolved_by_guarded_feasibility": 12
+      },
+      "physical_category_counts": {
+        "false_negative": 80,
+        "false_positive": 740,
+        "wrong_successors": 1667
+      },
+      "physical_error_rows": 2487,
+      "tool": "SJA"
+    }
+  },
+  "correction": "This report supersedes artifact_eval/corpus1_audit. The earlier audit treated the accepted repaired tree as T_phys, which mixed 347 real physical-site additions with 25 feasibility-oriented successor shrinks. The corrected T_phys retains every evidenced site and restores the 25 compiler-physical target sets.",
+  "definitions": {
+    "T_feas": "Guarded site-feasible successors. Each site retains its T_phys site key and every T_feas target must be a member of its T_phys target set.",
+    "T_phys": "All physically evidenced jump-table site targets: compiler/linker physical entries for compiler-marked sites, plus audited existing computed-goto and other omitted physical sites. Feasibility filtering is not applied."
+  },
+  "layer_verification": {
+    "action_counts": {
+      "guarded_confirmation": 34184,
+      "guarded_refinement": 811,
+      "retained_without_resolved_guard": 26254
+    },
+    "added_physical_sites": 347,
+    "changed_sites": 811,
+    "definition": {
+      "T_feas": "Guarded site-feasible successors. Each site retains its T_phys site key and every T_feas target must be a member of its T_phys target set.",
+      "T_phys": "All physically evidenced jump-table site targets: compiler/linker physical entries for compiler-marked sites, plus audited existing computed-goto and other omitted physical sites. Feasibility filtering is not applied."
+    },
+    "dropped_nonphysical_edges": 23,
+    "feasible_hash_mismatches": 0,
+    "feasible_target_edges": 748845,
+    "files": 2026,
+    "manifest": "/mnt/nvme1/sba/tmp/x86-sok-corpus1-two-layer-v2/oracle_layer_manifest.csv",
+    "manifest_rows": 2026,
+    "physical_hash_mismatches": 0,
+    "physical_target_edges": 749773,
+    "restored_physical_target_sets": 25,
+    "schema_version": 1,
+    "sidecar_subset_violations": 0,
+    "sites": 61249,
+    "subset_invariant": "enforced by construction; guarded targets are intersected with T_phys and a site with no accepted target retains T_phys",
+    "verified_sidecar_feasible_edges": 748845,
+    "verified_sidecar_physical_edges": 749773,
+    "verified_sidecar_sites": 61249
+  },
+  "metrics": [
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61249,
+      "exact_matches": 61224,
+      "false_negative": 0,
+      "false_positive": 0,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_phys",
+      "precision": 0.9995918300706951,
+      "recall": 0.9995918300706951,
+      "tool": "ProofJTR",
+      "truth_total": 61249,
+      "wrong_successors": 25
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61249,
+      "exact_matches": 60449,
+      "false_negative": 0,
+      "false_positive": 0,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_feas",
+      "precision": 0.986938562262241,
+      "recall": 0.986938562262241,
+      "tool": "ProofJTR",
+      "truth_total": 61249,
+      "wrong_successors": 800
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61242,
+      "exact_matches": 61096,
+      "false_negative": 29,
+      "false_positive": 22,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_phys",
+      "precision": 0.9976160151529996,
+      "recall": 0.9975020000326535,
+      "tool": "IDA Pro 9.0",
+      "truth_total": 61249,
+      "wrong_successors": 124
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61242,
+      "exact_matches": 60297,
+      "false_negative": 29,
+      "false_positive": 22,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_feas",
+      "precision": 0.9845694131478397,
+      "recall": 0.9844568890920669,
+      "tool": "IDA Pro 9.0",
+      "truth_total": 61249,
+      "wrong_successors": 923
+    },
+    {
+      "address_normalized_files": 56,
+      "address_normalized_sites": 7567,
+      "detected_total": 49209,
+      "exact_matches": 48438,
+      "false_negative": 12062,
+      "false_positive": 22,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 2,
+      "filtered_unknown_sites": 2,
+      "ground_truth": "T_phys",
+      "precision": 0.9843321343656648,
+      "recall": 0.7908374014269621,
+      "tool": "Ghidra 12",
+      "truth_total": 61249,
+      "wrong_successors": 749
+    },
+    {
+      "address_normalized_files": 56,
+      "address_normalized_sites": 7567,
+      "detected_total": 49209,
+      "exact_matches": 48020,
+      "false_negative": 12062,
+      "false_positive": 22,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 2,
+      "filtered_unknown_sites": 2,
+      "ground_truth": "T_feas",
+      "precision": 0.9758377532565181,
+      "recall": 0.784012800208983,
+      "tool": "Ghidra 12",
+      "truth_total": 61249,
+      "wrong_successors": 1167
+    },
+    {
+      "address_normalized_files": 53,
+      "address_normalized_sites": 7076,
+      "detected_total": 50859,
+      "exact_matches": 49220,
+      "false_negative": 10400,
+      "false_positive": 10,
+      "files": 2026,
+      "filtered_call_sites": 3,
+      "filtered_non_jump_sites": 3,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_phys",
+      "precision": 0.967773648715075,
+      "recall": 0.8036049568156215,
+      "tool": "angr",
+      "truth_total": 61249,
+      "wrong_successors": 1629
+    },
+    {
+      "address_normalized_files": 53,
+      "address_normalized_sites": 7076,
+      "detected_total": 50859,
+      "exact_matches": 48535,
+      "false_negative": 10400,
+      "false_positive": 10,
+      "files": 2026,
+      "filtered_call_sites": 3,
+      "filtered_non_jump_sites": 3,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_feas",
+      "precision": 0.9543050394227177,
+      "recall": 0.7924211007526654,
+      "tool": "angr",
+      "truth_total": 61249,
+      "wrong_successors": 2314
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 32847,
+      "exact_matches": 32716,
+      "false_negative": 28409,
+      "false_positive": 7,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_phys",
+      "precision": 0.9960118123420708,
+      "recall": 0.5341474962856536,
+      "tool": "Dyninst",
+      "truth_total": 61249,
+      "wrong_successors": 124
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 32847,
+      "exact_matches": 32486,
+      "false_negative": 28409,
+      "false_positive": 7,
+      "files": 2026,
+      "filtered_call_sites": 0,
+      "filtered_non_jump_sites": 0,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_feas",
+      "precision": 0.9890096508052486,
+      "recall": 0.5303923329360479,
+      "tool": "Dyninst",
+      "truth_total": 61249,
+      "wrong_successors": 354
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61909,
+      "exact_matches": 59502,
+      "false_negative": 80,
+      "false_positive": 740,
+      "files": 2026,
+      "filtered_call_sites": 11550,
+      "filtered_non_jump_sites": 11550,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_phys",
+      "precision": 0.9611203540680676,
+      "recall": 0.9714770853401689,
+      "tool": "SJA",
+      "truth_total": 61249,
+      "wrong_successors": 1667
+    },
+    {
+      "address_normalized_files": 0,
+      "address_normalized_sites": 0,
+      "detected_total": 61909,
+      "exact_matches": 58747,
+      "false_negative": 80,
+      "false_positive": 740,
+      "files": 2026,
+      "filtered_call_sites": 11550,
+      "filtered_non_jump_sites": 11550,
+      "filtered_unknown_sites": 0,
+      "ground_truth": "T_feas",
+      "precision": 0.9489250351322102,
+      "recall": 0.9591503534751588,
+      "tool": "SJA",
+      "truth_total": 61249,
+      "wrong_successors": 2422
+    }
+  ],
+  "paper_sentence": "We publish two explicit oracles: T_phys contains all physically evidenced table targets, including compiler/linker-bound entries and audited computed-goto and other physical-site additions; T_feas is its independently guarded site-feasible subset.",
+  "protocol": "All tools are scored against the same two protobuf layers with the unchanged positive jump-only comparator. Every T_phys discrepancy is reclassified against the materialized T_feas target set.",
+  "schema_version": 1,
+  "scores": {
+    "T_feas": "/mnt/nvme1/JPT/x86-sok/artifact_eval/corpus1_two_layer_audit/scores/T_feas",
+    "T_phys": "/mnt/nvme1/JPT/x86-sok/artifact_eval/corpus1_two_layer_audit/scores/T_phys"
+  }
+}

@@ -1,5 +1,11 @@
 # Corpus 1 Symmetric Audit
 
+> **Superseded.** This audit used the accepted repaired GT tree as
+> `T_phys`. That tree mixes 347 real physical-site additions with 25
+> feasibility-oriented successor shrinks. Use
+> [`../corpus1_two_layer_audit/summary.md`](../corpus1_two_layer_audit/summary.md)
+> for the corrected physical/feasible split.
+
 The unchanged positive jump-only comparator scores each tool against T_phys and T_feas. Every T_phys incorrect row is then re-evaluated against the hash-bound T_feas protobuf and its extract_gt jump-table sidecar.
 
 Every discrepancy between any evaluated tool and x86-sok was audited under the identical protocol: the same frozen physical truth, the same hash-bound clean-room refinement, and the same extract_gt jump-table validator.
